@@ -1,93 +1,64 @@
-import bcrypt from "bcryptjs";   // import thư viện bcryptjs
-import db from "../models/index.js"; // import database
+import bcrypt from "bcryptjs";
+import db from "../models/index.js";
+import redisClient from "../redis.js"; // file cấu hình Redis
+import crypto from "crypto";
 
-const salt = bcrypt.genSaltSync(10); // thuật toán hash password
+const salt = bcrypt.genSaltSync(10);
 
-// Tạo user mới
-export async function createNewUser(data) {
-  try {
-    let hashPasswordFromBcrypt = await hashUserPassword(data.password);
-    await db.User.create({
-      email: data.email,
-      password: hashPasswordFromBcrypt,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      address: data.address,
-      phoneNumber: data.phoneNumber,
-      gender: data.gender === "1" ? true : false,
-      roleId: data.roleId,
-    });
-    return "OK create a new user successful";
-  } catch (e) {
-    throw e;
-  }
-}
-
-// Mã hoá mật khẩu
+// Hàm hash password
 async function hashUserPassword(password) {
-  try {
-    let hashPassword = await bcrypt.hashSync(password, salt);
-    return hashPassword;
-  } catch (e) {
-    throw e;
-  }
+  return bcrypt.hashSync(password, salt);
 }
 
-// Lấy tất cả user
-export async function getAllUser() {
-  try {
-    let users = await db.User.findAll({ raw: true });
-    return users;
-  } catch (e) {
-    throw e;
-  }
+// Hàm gửi OTP và lưu user tạm vào Redis
+export async function sendOtpForRegister(data) {
+  const { email, password, fullName, phoneNumber } = data;
+
+  // Sinh OTP ngẫu nhiên 6 số
+  const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Hash mật khẩu
+  const hashPassword = await hashUserPassword(password);
+
+  // Lưu thông tin tạm vào Redis (timeout 5 phút)
+  const userTemp = JSON.stringify({
+    email,
+    password: hashPassword,
+    fullName,
+    phoneNumber,
+    isVerified: false,
+    role: "customer",
+  });
+
+  await redisClient.setEx(`otp:${email}`, 300, JSON.stringify({ otp, userTemp }));
+
+  // TODO: gửi OTP qua SMS hoặc email
+  console.log(`OTP cho ${email}: ${otp}`);
 }
 
-// Lấy user theo Id
-export async function getUserInfoById(userId) {
-  try {
-    let user = await db.User.findOne({
-      where: { id: userId },
-      raw: true,
-    });
-    return user ? user : [];
-  } catch (e) {
-    throw e;
+// Hàm xác thực OTP và tạo user
+export async function verifyOtpAndCreateUser(email, otp) {
+  const data = await redisClient.get(`otp:${email}`);
+  if (!data) {
+    throw new Error("OTP hết hạn hoặc không tồn tại");
   }
-}
 
-// Cập nhật user
-export async function updateUser(data) {
-  try {
-    let user = await db.User.findOne({
-      where: { id: data.id },
-    });
-    if (user) {
-      user.firstName = data.firstName;
-      user.lastName = data.lastName;
-      user.address = data.address;
-      await user.save();
+  const { otp: storedOtp, userTemp } = JSON.parse(data);
 
-      let allUsers = await db.User.findAll();
-      return allUsers;
-    } else {
-      return [];
-    }
-  } catch (e) {
-    throw e;
+  if (otp !== storedOtp) {
+    throw new Error("OTP không chính xác");
   }
-}
 
-// Xoá user
-export async function deleteUserById(userId) {
-  try {
-    let user = await db.User.findOne({
-      where: { id: userId },
-    });
-    if (user) {
-      await user.destroy();
-    }
-  } catch (e) {
-    throw e;
-  }
+  const userData = JSON.parse(userTemp);
+
+  // Tạo user trong DB
+  const newUser = await db.User.create({
+    ...userData,
+    isVerified: true,
+  });
+
+  // Xóa OTP trong Redis sau khi dùng
+  await redisClient.del(`otp:${email}`);
+
+  return newUser;
 }

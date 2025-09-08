@@ -1,39 +1,24 @@
 import express from "express";
-import authController from "../controllers/homeController.js"; // controller cho đăng ký & OTP
-import { login } from "../controllers/authController.js"; // controller cho login
-import { authenticate } from "../middlewares/authMiddleware.js"; // middleware JWT
+import authController from "../controllers/homeController.js"; // register + OTP
+import { login } from "../controllers/authController.js";
+import { authenticate } from "../middlewares/authMiddleware.js";
 import db from "../models/index.js";
 
-let router = express.Router();
+const router = express.Router();
 
-const initWebRoutes = (app) => {
-  // API đăng ký (gửi OTP)
-  router.post("/register", authController.register);
+router.post("/register", authController.register);
+router.post("/verify-otp", authController.verifyOtp);
+router.post("/login", login);
 
-  // API xác thực OTP
-  router.post("/verify-otp", authController.verifyOtp);
-
-  // API đăng nhập
-  router.post("/login", login);
-
-  // API profile (yêu cầu JWT)
-  router.get("/profile", authenticate, async (req, res) => {
-    const user = await db.User.findByPk(req.user.id, {
-      attributes: { exclude: ["password"] },
-    });
-    return res.json({ user });
+router.get("/profile", authenticate, async (req, res) => {
+  const user = await db.User.findByPk(req.user.id, {
+    attributes: { exclude: ["password"] },
   });
+  return res.json({ user });
+});
 
-  // API quên mật khẩu (gửi OTP)
-  router.post("/forgot-password", authController.forgotPassword);
+router.post("/forgot-password", authController.forgotPassword);
+router.post("/verify-forgot-otp", authController.verifyForgotOtp);
+router.post("/reset-password", authController.resetPassword);
 
-  // API xác thực OTP quên mật khẩu
-  router.post("/verify-forgot-otp", authController.verifyForgotOtp);
-
-  // API đổi mật khẻu
-  router.post("/reset-password", authController.resetPassword);
-
-  return app.use("/", router);
-};
-
-export default initWebRoutes;
+export default router;

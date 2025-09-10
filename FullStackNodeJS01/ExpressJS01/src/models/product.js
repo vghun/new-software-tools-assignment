@@ -23,10 +23,10 @@ export default (sequelize, DataTypes) => {
         type: DataTypes.TEXT,
         allowNull: true
       },
-      image: {
-        type: DataTypes.STRING,
-        allowNull: true
-      },
+     imageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
       categoryId: {
         type: DataTypes.INTEGER,
         allowNull: false,

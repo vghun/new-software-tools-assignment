@@ -1,25 +1,36 @@
 // src/services/productService.js
-import db from "../models/index.js";
-import { Op } from "sequelize";
+import * as productRepo from "../repositories/productRepo.js";
+import * as productSearchRepo from "../repositories/productSearchRepo.js";
 
-export async function getProductsByCategoryService(categoryId, page, limit, q) {
-  const offset = (page - 1) * limit;
-  const where = { categoryId };
+/**
+ * Tạo sản phẩm mới, lưu vào MySQL và index vào Elasticsearch
+ */
+export const createProduct = async (data) => {
+  const product = await productRepo.createProduct(data);
 
-  if (q) where.name = { [Op.like]: `%${q}%` };
+  // đồng bộ sang Elasticsearch
+  await productSearchRepo.indexProduct(product.toJSON());
 
-  return db.Product.findAndCountAll({
-    where,
-    limit,
-    offset,
-    order: [["createdAt", "DESC"]],
-    include: [{ model: db.Category, attributes: ["id", "name"] }],
-  });
-}
+  return product;
+};
 
-export async function getAllCategoriesService() {
-  return db.Category.findAll({
-    attributes: ["id", "name", "description"],
-    order: [["name", "ASC"]],
-  });
-}
+/**
+ * Tìm kiếm sản phẩm bằng Elasticsearch (fuzzy search)
+ */
+export const searchProducts = async (filters) => {
+  return productSearchRepo.searchProducts(filters);
+};
+
+/**
+ * Lấy danh sách sản phẩm theo category (MySQL)
+ */
+export const getProductsByCategory = async ({ categoryId, page, limit }) => {
+  return productRepo.findProducts({ categoryId, page, limit });
+};
+
+/**
+ * Lấy tất cả category (MySQL)
+ */
+export const getAllCategories = async () => {
+  return productRepo.findAllCategories();
+};

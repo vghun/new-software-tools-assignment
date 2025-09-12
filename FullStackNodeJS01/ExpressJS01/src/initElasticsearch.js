@@ -3,7 +3,6 @@ import esClient from "./config/elasticsearch.js";
 import db from "./models/index.js"; // MySQL
 
 async function init() {
-  // 1️⃣ Tạo index nếu chưa tồn tại
   const indexExists = await esClient.indices.exists({ index: "products" });
   if (!indexExists) {
     await esClient.indices.create({ index: "products" });
@@ -12,7 +11,6 @@ async function init() {
     console.log("Index 'products' đã tồn tại");
   }
 
-  // 2️⃣ Index tất cả sản phẩm từ MySQL
   const products = await db.Product.findAll();
   for (const p of products) {
     await esClient.index({

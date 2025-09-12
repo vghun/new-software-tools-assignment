@@ -31,7 +31,7 @@ export async function sendOtpForRegister(data) {
       password: hashPassword,
       fullName,
       phoneNumber,
-      isVerified: false,
+      isStatus: false,
       role: "customer",
     },
     expiresAt: Date.now() + 5 * 60 * 1000 // 5 phút
@@ -62,7 +62,7 @@ export async function verifyOtpAndCreateUser(email, otp) {
   // Tạo user trong DB
   const newUser = await db.User.create({
     ...record.user,
-    isVerified: true,
+    isStatus: true,
   });
 
   // Xóa khỏi store sau khi đã đăng ký thành công

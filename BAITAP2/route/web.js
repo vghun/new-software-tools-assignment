@@ -1,5 +1,5 @@
 import express from "express";
-import authController from "../controller/authController.js"; // controller cho đăng ký & OTP
+import authController from "../controller/homeController.js"; // controller cho đăng ký & OTP
 
 let router = express.Router();
 

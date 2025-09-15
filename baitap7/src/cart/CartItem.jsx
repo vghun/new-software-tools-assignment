@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { CartContext } from "./CartProvider";
-import Button from "../components/Button";
+import Button from "../components/button";
 
 const CartItem = ({ item }) => {
   const { updateItem, removeItem } = useContext(CartContext);

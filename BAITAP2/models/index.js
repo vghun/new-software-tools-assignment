@@ -3,7 +3,8 @@ import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";   
 import { Sequelize, DataTypes } from "sequelize";
 import process from "process";
-import configFile from "../config/config.json" assert { type: "json" };
+import configFile from "../config/config.json" with { type: "json" };
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
